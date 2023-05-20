@@ -1,0 +1,116 @@
+body {
+    background-color: white;
+    color: white;
+}
+
+.sidebar {
+    background-color: #1f2228;
+    padding: 10px;
+    height: 100vh;
+}
+
+.sidebar ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.sidebar li {
+    margin-bottom: 10px;
+}
+
+.sidebar a {
+    color: #ffffff;
+    text-decoration: none;
+}
+
+.sidebar a:hover {
+    color: #25ca85;
+}
+
+.panel-container {
+    max-width: 3000px;
+    margin: 10px;
+    padding: 20px;
+    background-color: #22262b;
+    border-radius: 10px;
+}
+
+.panel-container h1 {
+    font-size: 30px;
+    margin-bottom: 30px;
+    text-align: left;
+}
+
+.ip-info p {
+    font-size: 18px;
+    margin-bottom: 10px;
+    text-align: left;
+}
+
+.scan-results h2 {
+    font-size: 24px;
+    margin-bottom: 20px;
+    text-align: left;
+}
+
+.scan-results .host-box {
+    background-color: #1f2228;
+    border-radius: 10px;
+    padding: 15px;
+    margin-bottom: 15px;
+}
+
+.host-box .host {
+    font-size: 18px;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.host-box .status {
+    font-size: 16px;
+    margin-bottom: 0;
+}
+
+.host-box.open {
+    border: 2px solid #25ca85;
+}
+
+.host-box.closed {
+    border: 2px solid #f85359;
+}
+
+footer {
+    margin-top: 50px;
+    padding: 10px 0;
+    text-align: center;
+    background-color: #1f2228;
+}
+
+footer p {
+    font-size: 14px;
+    margin-bottom: 0;
+}
+
+footer a {
+    color: #ffffff;
+    text-decoration: none;
+}
+
+footer a:hover {
+    color: #25ca85;
+}
+.loading-spinner {
+        border: 16px solid #f3f3f3;
+        border-top: 16px solid #3498db;
+        border-radius: 50%;
+        width: 120px;
+        height: 120px;
+        animation: spin 2s linear infinite;
+        margin: 0 auto;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }

@@ -4,6 +4,7 @@ import ipaddress
 import socket
 import threading
 from datetime import datetime
+from src.core.AttackService import *
 
 from src.core.CustomFunc import *
 from queue import Queue
@@ -95,10 +96,11 @@ class NetScan:
             q.put(None)
         for t in threads:
             t.join()
-
+        p_print("Scan completed")
         return self.availHostDict
 
     def portScan(self, targetList=None):
+        p_print("target is:"+targetList)
         socket.setdefaulttimeout(3)
         #portscan 핸들링 함수
         def worker():
@@ -113,13 +115,31 @@ class NetScan:
 
         #portscan 실행 함수
         def scan(targetIp):
+            atk = AttackService(targetIp)
             resPorts = []
 
             for port in self.targetPorts:
+                p_print("Target port : "+str(port))
                 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 res = sock.connect_ex((targetIp, port))
                 if res == 0:
-                    resPorts.append(port)
+                    #포트가 열려있으면 서비스 탐색
+                    if port==20:
+                        res = atk.ftpScan()
+                    elif port==21:
+                        res = atk.ftpScan()
+                    elif port==22:
+                        res = atk.sshScan()
+                    elif port==23:
+                        res = atk.telnetScan()
+                    else:
+                        pass
+                    #@todo 포트에 따른 스캐너 추가 구현
+
+
+                    #atk에 등록되어있는 method가 아닌경우 그냥 res==0 반환
+                    if res==0 or res==True:
+                        resPorts.append(port)
                 sock.close()
 
             with availHostLock:
@@ -170,15 +190,14 @@ class NetScan:
             t.join()
 
 
-
         return self.availPortDict
 
 
 if __name__=="__main__":
-    ns = NetScan("192.168.150.0","24",[20,21,22,3306,1221,1222])
+    ns = NetScan("192.168.150.0","24",[1280,1221,1234,1222,1223])
 
     data1 = ns.hostScan()
-    data2 = ns.portScan()
+    data2 = ns.portScan("127.0.0.1")
     print(data2)
 
 

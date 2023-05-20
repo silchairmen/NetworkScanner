@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>호스트 스캔 패널</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css">
+    <link rel="stylesheet" type="text/css" href="../static/css/style.css">
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-md-2 sidebar">
+                <ul>
+                    <li><a href="#">내 정보</a></li>
+                    <li>
+                        <a href="#" data-toggle="collapse" data-target="#scan-info">
+                            스캔된 호스트 정보 <span class="dropdown-toggle"></span>
+                        </a>
+                        <ul id="scan-info" class="collapse">
+                            {% for host in scan_hosts.keys() %}
+                            <li><a href="{{ url_for('host_details', host=host) }}">{{ host }}</a></li>
+                            {% endfor %}
+                        </ul>
+                    </li>
+                    <li><a href="#">로그</a></li>
+                </ul>
+            </div>
+            <div class="col-md-10">
+                <div class="panel-container">
+                    <div class="host-scan-panel">
+                        <h1>호스트 스캔 패널</h1>
+                        <div class="ip-info">
+                            <p><strong>IP 주소:</strong> {{ ip }}</p>
+                            <p><strong>네트워크 종류:</strong> {{ network_type }}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="panel-container">
+                    <div class="scan-results">
+                        <h2>호스트 스캔 결과</h2>
+                        {% for host, time in scan_hosts.items() %}
+                        <div class="host-box">
+                            <p class="host"><a href="{{ url_for('host_details', host=host) }}">{{ host }}</a></p>
+                            <p class="status"><strong>상태:</strong> {{ time }} <strong>스캔 완료</strong></p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="panel-container">
+                    <div class="scan-start">
+                        <h2>호스트 스캔 시작</h2>
+                        <form id="scan-form">
+                            <div class="form-group">
+                                <label for="network">네트워크 대역:</label>
+                                <input type="text" class="form-control" id="network" name="network" placeholder="예: 192.168.0.0">
+                            </div>
+                            <div class="form-group">
+                                <label for="netmask">넷마스크:</label>
+                                <input type="text" class="form-control" id="netmask" name="netmask" placeholder="예: 24">
+                            </div>
+                            <button type="submit" class="btn btn-primary">스캔 시작하기</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <footer>
+        <div class="container">
+            <p>개발자 정보: Jalnik | 이메일: robin9901@naver.com</p>
+        </div>
+    </footer>
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            function updateScanInfo(scan_hosts) {
+                var scanInfoList = $("#scan-info");
+                scanInfoList.empty();
+                $.each(scan_hosts, function(host, time) {
+                    var listItem = $("<li></li>");
+                    var link = $("<a></a>").attr("href", "{{ url_for('host_details', host=host) }}").text(host);
+                    listItem.append(link);
+                    scanInfoList.append(listItem);
+                });
+            }
+
+            $('#scan-form').submit(function(event) {
+                event.preventDefault();
+                var network = $('#network').val();
+                var netmask = $('#netmask').val();
+
+                // 로딩 표시 추가
+                $('.scan-start').append('<div id="loading-spinner" class="spinner-border text-primary" role="status"></div>');
+
+                $.post('/scan', { network: network, netmask: netmask })
+                    .done(function(data) {
+                        // 스캔 결과 처리
+                        var scan_hosts = data.scan_hosts;
+                        var ip = data.ip;
+
+                        // 로딩 표시 제거
+                        $('#loading-spinner').remove();
+
+                        // 스캔 결과 업데이트
+                        $('.scan-results').empty();
+                        // 스캔 결과 업데이트
+                        $.each(scan_hosts, function(host, time) {
+                            var hostBox = '<div class="host-box">' +
+                                '<p class="host"><a href="' + '{{ url_for("host_details", host="") }}' + host + '">' + host + '</a></p>' +
+                                '<p class="status"><strong>상태:</strong> ' + time + ' <strong>스캔 완료</strong></p>' +
+                                '</div>';
+                            $('.scan-results').append(hostBox);
+                        });
+
+
+                        // 사이드바의 스캔된 호스트 정보 업데이트
+                        updateScanInfo(scan_hosts);
+
+                        // 페이지 이동 대신 메시지를 표시
+                        $('.scan-results').after('<p id="scan-complete-msg">스캔이 완료되었습니다.</p>');
+
+                        // 일정 시간(예: 2초) 후에 메시지를 제거
+                        setTimeout(function() {
+                            $('#scan-complete-msg').remove();
+                        }, 2000);
+
+                        // IP 정보 업데이트
+                        $('.ip-info').html('<p><strong>IP 주소:</strong> ' + ip + '</p>' +
+                            '<p><strong>네트워크 종류:</strong> ' + network + '</p>');
+
+                    })
+                    .fail(function() {
+                        // 오류 처리
+                        // 로딩 표시 제거
+                        $('#loading-spinner').remove();
+                        console.log('An error occurred during scan.');
+                    });
+            });
+        });
+    </script>
+
+</body>
+</html>

@@ -1,34 +1,78 @@
 import getpass
 import telnetlib
+from paramiko import SSHClient, AutoAddPolicy
+import paramiko
+import ftplib
 
 class AttackService:
-    def __init__(self):
-        pass
+    def __init__(self, targetIp):
+        self.targetIp = targetIp
 
-    def sshScan(self):
-        pass
+    def sshScan(self, port=None) -> bool:
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(AutoAddPolicy())
 
-    def telnetScan(self):
-        # HOST = "localhost"
-        HOST = input("input host : ")
-        user = input("Enter your remote account: ")
-        password = getpass.getpass()
+        try:
+            if port==None:
+                id = ssh.connect(self.targetIp, port=22)
+                print(id)
+                ssh.close()
+            else:
+                ssh.connect(self.targetIp, port=port, timeout=5)
+                ssh.close()
+            return True
+        except Exception as e:
+            if "Authentication" in str(e):
+                return True
+            else:
+                return False
 
-        tn = telnetlib.Telnet(HOST)
+    def telnetScan(self, port=None) -> bool:
+        isTelnet = False
 
-        tn.read_until(b"login: ")
-        tn.write(user.encode('ascii') + b"\n")
-        if password:
-            tn.read_until(b"Password: ")
-            tn.write(password.encode('ascii') + b"\n")
+        if port==None:
+            tn = telnetlib.Telnet(self.targetIp)
+        else:
+            tn = telnetlib.Telnet(self.targetIp, port=port)
 
-        tn.write(b"ls\n")
-        tn.write(b"exit\n")
+        response = tn.read_until(b"login").decode('ascii')
 
-        print(tn.read_all().decode('ascii'))
+        if "login" in response:
+            isTelnet = True
+
+        return isTelnet
 
     def ftpLfi(self):
         pass
 
-    def ftpScan(self):
-        pass
+    def ftpScan(self, port=None) -> bool:
+        try:
+            ftp = ftplib.FTP()
+            if port is not None:
+                ftp.connect(self.targetIp, port, timeout=5)
+            else:
+                ftp.connect(self.targetIp, 21, timeout=5)
+            return True
+        except Exception as e:
+            return False
+
+    def anonLogin(self, port=None) -> bool:
+        try:
+            ftp = ftplib.FTP()
+
+            if port==None:
+                ftp.connect(self.targetIp, 21, timeout=5)
+                ftp.login()
+                ftp.quit()
+            else:
+                ftp.connect(self.targetIp, port, timeout=5)
+                ftp.login()
+                ftp.quit()
+            return True
+        except Exception as e:
+            return False
+
+if __name__=="__main__":
+    a = AttackService("127.0.0.1")
+    b = a.anonLogin(1221)
+    print(b)
