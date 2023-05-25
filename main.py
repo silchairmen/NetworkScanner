@@ -25,6 +25,7 @@ from src.core.CustomFunc import *
 if __name__ == '__main__':
     p_print("Starting Website")
     try:
-        run_web("127.0.0.1", 8080)
+        #app.run
+        run()
     except Exception as e:
         e_print(F"Error! {e}")

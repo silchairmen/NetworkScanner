@@ -57,7 +57,7 @@ class NetScan:
                 q.task_done()
 
         def scanLinuxHost(targetIp):
-            alive = os.system("ping -c 1 " + str(targetIp) + " > /dev/null")
+            alive = os.system("ping -c 1 " + str(targetIp) + "2>/dev/null")
 
             #응답이 있으면 호스트와 스캔 시각을 작성
             if alive == 0:
@@ -85,9 +85,13 @@ class NetScan:
             t.start()
             threads.append(t)
 
-        #q 에 IP를 넣고 작업이 끝날 때까지 대기
-        for ip in self.ipRange[1:-1]:
-            q.put(ip)
+        #q 에 IP를 넣고 작업이 끝날 때까지 대기, 서브넷 마스크가 24일때는 처음과 끝을 빼줌
+        if len(self.ipRange) == 256:
+            for ip in self.ipRange[1:-1]:
+                q.put(ip)
+        else:
+            for ip in self.ipRange:
+                q.put(ip)
 
         q.join()
 
@@ -99,8 +103,11 @@ class NetScan:
         p_print("Scan completed")
         return self.availHostDict
 
-    def portScan(self, targetList=None):
-        p_print("target is:"+targetList)
+
+
+    #포트스캔
+    def portScan(self, targetList=None, service=None):
+        p_print(f"target = {self.ipRange} port is:"+targetList)
         socket.setdefaulttimeout(3)
         #portscan 핸들링 함수
         def worker():
@@ -121,25 +128,33 @@ class NetScan:
             for port in self.targetPorts:
                 p_print("Target port : "+str(port))
                 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                port = int(port)
                 res = sock.connect_ex((targetIp, port))
                 if res == 0:
-                    #포트가 열려있으면 서비스 탐색
-                    if port==20:
-                        res = atk.ftpScan()
-                    elif port==21:
-                        res = atk.ftpScan()
-                    elif port==22:
-                        res = atk.sshScan()
-                    elif port==23:
-                        res = atk.telnetScan()
+                    if service==None:
+                        resPorts.append(port)
+
+                    # 포트가 열려있으면 서비스 탐색
                     else:
-                        pass
+                        if service=='20' or service=='21':
+                            p_print("FTP 서비스 스캔 추가 요청 실행중...")
+                            res = atk.ftpScan(port)
+                        elif service=='22':
+                            p_print("SSH 서비스 스캔 추가 요청 실행중...")
+                            res = atk.sshScan(port)
+                        elif service=='23':
+                            res = atk.telnetScan(port)
+                            p_print("FTP 서비스 스캔 추가 요청 실행중...")
+                        elif service=='80' or service=='443':
+                            p_print("HTTP/S 서비스 스캔 추가 요청 실행중...")
+                            res = atk.httpScan(port)
+
+                        #사용자가 서비스를 선택했고 결과가 나온경우
+                        if res == True:
+                            resPorts.append(port)
+
                     #@todo 포트에 따른 스캐너 추가 구현
 
-
-                    #atk에 등록되어있는 method가 아닌경우 그냥 res==0 반환
-                    if res==0 or res==True:
-                        resPorts.append(port)
                 sock.close()
 
             with availHostLock:
@@ -189,7 +204,7 @@ class NetScan:
         for t in threads:
             t.join()
 
-
+        e_print(self.availPortDict)
         return self.availPortDict
 
 

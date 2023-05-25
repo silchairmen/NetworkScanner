@@ -5,13 +5,14 @@
     <title>호스트 세부 정보</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css">
     <link rel="stylesheet" type="text/css" href="../static/css/style.css">
+    <script src="../static/js/Attack_control.js"></script>
 </head>
 <body>
     <div class="container-fluid">
         <div class="row">
             <div class="col-md-2 sidebar">
                 <ul>
-                    <li><a href="#">내 정보</a></li>
+                    <li><a href="/">내 정보</a></li>
                     <li>
                         <a href="#" data-toggle="collapse" data-target="#scan-info">
                             스캔된 호스트 정보 <span class="dropdown-toggle"></span>
@@ -36,9 +37,9 @@
                         </div>
                         <div class="port-scan-buttons">
                             <!-- 주요 포트 점검 버튼 -->
-                            <button id="major-port-scan-btn" class="btn btn-primary">주요 포트 점검</button>
+                            <button id="major-port-scan-btn" class="btn btn-outline-success">주요 포트 점검</button>
                             <!-- 특정 포트 점검 버튼 -->
-                            <button id="specific-port-scan-btn" class="btn btn-primary">특정 포트 점검</button>
+                            <button id="specific-port-scan-btn" class="btn btn-outline-success">특정 포트 점검</button>
                         </div>
                     </div>
                 </div>
@@ -60,7 +61,7 @@
                 // 주요 포트 점검 버튼을 눌렀을 때 주요 포트 리스트를 표시하는 div 생성
                 var portListDiv = '<div id="port-list-div"><h2>주요 포트 점검</h2>';
                 portListDiv += '<p>주요 포트 목록: 20, 21, 22, 23, 25, 80, 443, 3306</p>';
-                portListDiv += '<button id="start-major-port-scan" class="btn btn-primary">포트 스캔 시작</button><br>';
+                portListDiv += '<button id="start-major-port-scan" class="btn btn-outline-primary">포트 스캔 시작</button><br>';
                 portListDiv += '</div>';
                 $('#port-list-div').html(portListDiv);
             });
@@ -70,8 +71,29 @@
                 // 특정 포트 입력을 받는 div 생성
                 var specificPortDiv = '<div id="port-list-div">';
                 specificPortDiv += '<h2>특정 포트 점검</h2>';
-                specificPortDiv += '<label>포트 번호   </label><input type="text" id="port-input" placeholder="포트 번호"><br>';
-                specificPortDiv += '<label>서비스 명   </label><input type="text" id="service-input" placeholder="서비스 명"><br>';
+                specificPortDiv += '<label>포트 번호</label><div class="input-group">' +
+                    '  <div class="input-group-prepend">' +
+                    '    <span class="input-group-text" id="">Port range</span>' +
+                    '  </div>' +
+                    '  <input type="text" class="form-control" id="startPort" placeholder="start port">' +
+                    '  <div> ~ </div>' +
+                    '  <input type="text" class="form-control" id="endPort" placeholder="end port">' +
+                    '</div><br>';
+
+                specificPortDiv += '<div class="input-group mb-3">' +
+                    '  <div class="input-group-prepend">' +
+                    '    <label class="input-group-text" for="inputGroupSelect01">Options</label>' +
+                    '  </div>' +
+                    '  <select class="custom-select" id="inputGroupSelect01">' +
+                    '    <option selected>Choose service</option>' +
+                    '    <option value="just port scan">Just Port Scan</option>' +
+                    '    <option value="ftp">FTP</option>' +
+                    '    <option value="ssh">SSH</option>' +
+                    '    <option value="telnet">TELNET</option>' +
+                    '    <option value="smtp">SMTP</option>' +
+                    '    <option value="http">HTTP</option>' +
+                    '    <option value="mysql">Mysql</option>' +
+                    '  </select>';
                 specificPortDiv += '<button id="start-specific-port-scan" class="btn btn-primary">포트 스캔 시작</button>';
                 specificPortDiv += '</div>';
                 $('#port-list-div').html(specificPortDiv);
@@ -82,7 +104,6 @@
                 // AJAX 요청 처리 중 로딩 표시
                 $('#port-list-div').html('<div class="loading-spinner">로딩중</div>');
 
-                // 주요 포트 점검 AJAX 요청
                 $.ajax({
                     url: '/port_scan',
                     method: 'POST',
@@ -92,57 +113,144 @@
                         // 주요 포트 점검 결과 표시
                         var ports = [20, 21, 22, 23, 25, 80, 443, 3306];
                         var portList = '<h2>주요 포트 점검</h2>';
+
                         for (var i = 0; i < ports.length; i++) {
-                            var portStatus = (data && data[data.ip] && data[data.ip].indexOf(ports[i]) !== -1) ? '열림' : '닫힘';
-                            portList += '<div class="panel-container">포트 ' + ports[i] + ' - ' + portStatus + '</div>';
+                            var portStatus = data['{{host}}'].includes(ports[i]) ? '<p style="color: #f85359">열림</p>' : '<p>닫힘</p>';
+                            var portAction = '';
+
+                            if (ports[i] === 20 || ports[i] === 21) {
+                                portAction = 'ftp';
+                            } else if (ports[i] === 22) {
+                                portAction = 'ssh';
+                            } else if (ports[i] === 23) {
+                                portAction = 'telnet';
+                            }
+
+                            portList += `<div class="panel-container" id=${ports[i]}>`;
+                            portList += '포트 ' + ports[i] +  portStatus;
+
+                            if (portAction !== '') {
+                                portList += '<div class="port-actions">';
+
+                                if (portAction === 'ftp') {
+                                    portList += `<button class="btn btn-outline-primary" onclick='performAction("{{host}}", ${ports[i]},"ftp annonymous scan")'>FTP Annonymous Scan</button>`;
+                                    portList += `<button class="btn btn-outline-primary" onclick='performAction("{{host}}", ${ports[i]},"ftp lfi attack")'>FTP LFI Attack</button>`;
+                                    portList += `<button class="btn btn-outline-primary" onclick='performAction("{{host}}", ${ports[i]},"ftp login broute force")'>FTP Login Brouteforce</button>`;
+                                } else if (portAction === 'ssh') {
+                                    portList += `<button class="btn btn-outline-primary" onclick='performAction("{{host}}", ${ports[i]},"ssh login broute force")'>SSH Login Brouteforce</button>`;
+                                } else if (portAction === 'telnet') {
+                                    portList += `<button class="btn btn-outline-primary" onclick='performAction("{{host}}", ${ports[i]},"telnet login broute force")'>Telnet Login Brouteforce</button>`;
+                                }
+
+                                portList += '</div>';
+                            }
+
+                            portList += '</div>';
                         }
+
                         $('#port-list-div').html(portList);
+
+                        // 동작 버튼 클릭 이벤트 처리
+                        // $('.btn').on('click', function() {
+                        //     var action = $(this).data('action');
+                        //     // 동작 수행
+                        //     performAction(action);
+                        // });
                     },
                     error: function() {
                         $('#port-list-div').html('<p>주요 포트 점검에 실패했습니다.</p>');
                     }
                 });
+
+
             });
 
             // 특정 포트 점검 버튼 클릭 시
-            $(document).on('click', '#start-specific-port-scan', function() {
-                // AJAX 요청 처리 중 로딩 표시
-                $('#port-list-div').html('<div class="loading-spinner"></div>');
+    $(document).on('click', '#start-specific-port-scan', function() {
+        var startPort = document.getElementById('startPort').value;
+        var endPort = document.getElementById('endPort').value;
+        var service = document.getElementById('inputGroupSelect01').value;
 
-                // 입력된 포트 번호와 서비스 명 가져오기
-                var port = $('#port-input').val();
-                var service = $('#service-input').val();
+        console.log("start : " + startPort)
+        console.log("end : " + endPort)
 
-                // 입력값 검증
-                if (!port || !service) {
-                    $('#port-list-div').html('<p>포트 번호와 서비스 명을 입력해주세요.</p>');
-                    return;
+        // AJAX 요청 처리 중 로딩 표시
+        $('#port-list-div').html('<div class="loading-spinner"></div>')
+
+        // 입력값 검증
+        if (!startPort || !endPort || !service) {
+            $('#port-list-div').html('<p>포트 번호와 서비스 명을 입력해주세요.</p>');
+            return;
+        }
+
+        // AJAX 요청
+        $.ajax({
+            url: '/port_scan',
+            method: 'POST',
+            data: { host: '{{host}}', startPort : startPort, endPort : endPort, service: service },
+            success: function(data) {
+                // 특정 포트 점검 결과 표시
+                var portList = '<h2>특정 포트 점검</h2>';
+                var ports = [20, 21, 22, 23, 25, 80, 443, 3306];
+                portList += '<p>포트 ' + startPort + '~' + endPort + ' 점검 결과</p>';
+
+
+                //반환된 port가 없는 경우
+                if (data['{{host}}'].length<1) {
+                    portList = '<p>스캔 포트 모두 닫힘</p>';
+                }
+                else{
+                    for (var i = 0; i < data['{{host}}'].length; i++) {
+                        console.log(ports.indexOf(data['{{host}}'][i]))
+                        var portStatus = ports.indexOf(data['{{host}}'][i])>=0 ? '<p style="color: #f85359">열림</p>' : '<p>닫힘</p>';
+                        var portAction = '';
+
+                        var port = parseInt(data['{{host}}'][i]);
+
+
+                        if (data['{{host}}'][i] === 20 || data['{{host}}'][i] === 21) {
+                            portAction = 'ftp';
+                        } else if (data['{{host}}'][i] === 22) {
+                            portAction = 'ssh';
+                        } else if (data['{{host}}'][i] === 23) {
+                            portAction = 'telnet';
+                        }
+
+                        portList += `<div class="panel-container" id="${data["{{host}}"][i]}">`;
+                        portList += '포트 : ' + data['{{host}}'][i] + ' / service : '+service +  portStatus;
+
+
+                        //포트에 따라서 action버튼을 추가함
+                        if (portAction !== '') {
+                            portList += '<div class="port-actions">';
+
+                            if (portAction === 'ftp') {
+                                portList += `<button class="btn btn-outline-primary" onclick='performAction("{{host}}", ${port},"ftp annonymous scan")'>FTP Annonymous Scan</button>`;
+                                portList += `<button class="btn btn-outline-primary" onclick='performAction("{{host}}", ${port},"ftp lfi attack")'>FTP LFI Attack</button>`;
+                                portList += `<button class="btn btn-outline-primary" onclick='performAction("{{host}}", ${port},"ftp login broute force")'>FTP Login Brouteforce</button>`;
+                            } else if (portAction === 'ssh') {
+                                portList += `<button class="btn btn-outline-primary" onclick='performAction("{{host}}", ${port},"ssh login broute force")'>SSH Login Brouteforce</button>`;
+                            } else if (portAction === 'telnet') {
+                                portList += `<button class="btn btn-outline-primary" onclick='performAction("{{host}}", ${port},"telnet login broute force")'>Telnet Login Brouteforce</button>`;
+                            }
+
+                            portList += '</div>';
+                        }
+
+                        portList += '</div>';
+                    }
                 }
 
-                // AJAX 요청
-                $.ajax({
-                    url: '/port_scan',
-                    method: 'GET',
-                    data: { host: '{{ host }}', port: port, service: service },
-                    success: function(data) {
-                        // 특정 포트 점검 결과 표시
-                        var result = data.result;
-                        var portList = '<h2>특정 포트 점검</h2>';
-                        portList += '<p>포트 ' + port + ' - ';
-                        if (result === 'open') {
-                            portList += '열림</p>';
-                        } else {
-                            portList += '닫힘</p>';
-                        }
-                        $('#port-list-div').html(portList);
-                    },
-                    error: function() {
-                        $('#port-list-div').html('<p>특정 포트 점검에 실패했습니다.</p>');
-                    }
-                });
+                $('#port-list-div').html(portList);
+
+            },
+                error: function() {
+                    $('#port-list-div').html('<p>주요 포트 점검에 실패했습니다.</p>');
+                }
             });
         });
-
-    </script>
+    // ... 이후 코드 ...
+    });
+</script>
 </body>
 </html>
